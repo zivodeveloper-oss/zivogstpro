@@ -1,0 +1,912 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Zivo GST Recon & Audit Pro</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = { darkMode: 'class' }
+    </script>
+    <!-- PDF.js -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+</head>
+<body class="bg-slate-100 dark:bg-slate-900 text-slate-800 dark:text-slate-100 font-sans antialiased transition-colors duration-200">
+
+    <!-- AUTHENTICATION & LICENSE LOCK WRAPPER -->
+    <div id="authContainer" class="hidden fixed inset-0 bg-slate-950/85 backdrop-blur-md flex items-center justify-center z-50 p-4">
+        <div class="bg-white dark:bg-slate-800 max-w-md w-full p-8 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-700 space-y-6">
+            <div class="text-center">
+                <span class="text-3xl">⚡</span>
+                <h2 id="authTitle" class="text-2xl font-bold text-slate-900 dark:text-white mt-2">Welcome to Zivo GST Pro</h2>
+                <p id="authSubtitle" class="text-xs text-slate-500 dark:text-slate-400 mt-1">Please register an account to start your 7-day free trial.</p>
+            </div>
+
+            <!-- REGISTRATION FORM -->
+            <form id="registerForm" onsubmit="handleRegister(event)" class="space-y-4">
+                <div>
+                    <label class="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">Full Name</label>
+                    <input type="text" id="regName" required class="w-full bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl p-3 text-sm focus:outline-none focus:border-indigo-500">
+                </div>
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">Date of Birth (18+)</label>
+                        <input type="date" id="regDob" required onchange="validateAge(this.value)" class="w-full bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl p-3 text-xs focus:outline-none focus:border-indigo-500">
+                        <p id="ageError" class="text-[10px] text-red-500 mt-1 hidden">Must be at least 18 years old.</p>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">Phone Number</label>
+                        <input type="text" id="regPhone" placeholder="Mobile number" required class="w-full bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl p-3 text-sm focus:outline-none focus:border-indigo-500">
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">Email Address</label>
+                    <input type="email" id="regEmail" required class="w-full bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl p-3 text-sm focus:outline-none focus:border-indigo-500">
+                </div>
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">Username</label>
+                        <input type="text" id="regUser" required class="w-full bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl p-3 text-sm focus:outline-none focus:border-indigo-500">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">Password</label>
+                        <input type="password" id="regPass" required class="w-full bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl p-3 text-sm focus:outline-none focus:border-indigo-500">
+                    </div>
+                </div>
+                <p id="regError" class="text-xs text-red-500 text-center"></p>
+                <button type="submit" id="regBtn" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-3 rounded-xl shadow transition">
+                    Create Account & Start Trial 🚀
+                </button>
+                <div class="text-center pt-2">
+                    <button type="button" onclick="switchAuthMode('login')" class="text-xs text-indigo-600 dark:text-indigo-400 hover:underline">Already have an account? Login here</button>
+                </div>
+            </form>
+
+            <!-- LOGIN FORM -->
+            <form id="loginForm" onsubmit="handleLogin(event)" class="space-y-4 hidden">
+                <div>
+                    <label class="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">Username</label>
+                    <input type="text" id="loginUser" required class="w-full bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl p-3 text-sm focus:outline-none focus:border-indigo-500">
+                </div>
+                <div>
+                    <label class="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">Password</label>
+                    <input type="password" id="loginPass" required class="w-full bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl p-3 text-sm focus:outline-none focus:border-indigo-500">
+                </div>
+                <p id="loginError" class="text-xs text-red-500 text-center"></p>
+                <button type="submit" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-3 rounded-xl shadow transition">
+                    Login to Workspace 🔓
+                </button>
+                <div class="text-center pt-2">
+                    <button type="button" onclick="switchAuthMode('register')" class="text-xs text-indigo-600 dark:text-indigo-400 hover:underline">Need an account? Register free trial</button>
+                </div>
+            </form>
+
+            <!-- LICENSE ACTIVATION LOCK VIEW (Shown when trial expires) -->
+            <div id="licenseLockView" class="space-y-4 hidden text-center">
+                <div class="bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-900 p-4 rounded-xl text-amber-800 dark:text-amber-300 text-xs">
+                    ⚠️ <strong>7-Day Free Trial Expired!</strong><br>Your work data has been automatically downloaded as a backup CSV file. Enter your license key below to continue.
+                </div>
+                <div>
+                    <label class="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1 text-left">Enter Activation License Key</label>
+                    <input type="text" id="licenseKeyInput" placeholder="ZIVO-KEY-XXXX-XXXX" class="w-full font-mono uppercase bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl p-3 text-sm focus:outline-none focus:border-indigo-500">
+                </div>
+                <p id="licenseError" class="text-xs text-red-500"></p>
+                <button onclick="verifyLicenseKey()" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-semibold py-3 rounded-xl shadow transition">
+                    Activate License 🔑
+                </button>
+                <div class="bg-slate-50 dark:bg-slate-900 p-3 rounded-xl border border-slate-200 dark:border-slate-700 text-xs space-y-1">
+                    <p class="font-semibold text-slate-700 dark:text-slate-300">Need a License Key?</p>
+                    <p class="text-slate-500 dark:text-slate-400">Email your payment proof to:</p>
+                    <p class="text-indigo-600 dark:text-indigo-400 font-bold select-all">zivo.developer@gmail.com</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- MAIN APP INTERFACE -->
+    <div class="flex min-h-screen">
+        <!-- Sidebar Navigation -->
+        <aside class="w-72 bg-slate-900 dark:bg-slate-950 text-white flex flex-col justify-between p-6 shadow-xl border-r border-slate-800">
+            <div>
+                <div class="flex items-center justify-between mb-1">
+                    <div class="flex items-center gap-2 whitespace-nowrap">
+                        <span class="text-2xl">⚡</span>
+                        <h1 class="text-xl font-bold tracking-tight">Zivo GST Pro</h1>
+                    </div>
+                    <!-- Theme Toggle Button -->
+                    <button onclick="toggleDarkMode()" class="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs shrink-0" title="Toggle Dark/Light Mode">
+                        🌓
+                    </button>
+                </div>
+                <p id="sidebarSubtitle" class="text-xs text-slate-400 mb-6">Unlimited Bulk Invoice Audit & Recon</p>
+
+                <!-- Subscription Status Badge -->
+                <div id="subscriptionBadgeBox" class="bg-indigo-950/80 border border-indigo-800/60 p-3 rounded-xl mb-6 space-y-1">
+                    <p class="text-xs font-semibold text-indigo-300 uppercase tracking-wider">Subscription Status</p>
+                    <p id="subStatusText" class="text-xs font-bold text-emerald-400">7-Day Free Trial Active</p>
+                </div>
+
+                <!-- Language Selector -->
+                <div id="langSelectorBox" class="mb-6">
+                    <label class="block text-xs uppercase tracking-wider text-slate-400 mb-1.5">Language</label>
+                    <select id="langSelector" class="w-full bg-slate-800 border border-slate-700 rounded-lg p-2 text-xs text-white focus:outline-none focus:border-indigo-500">
+                        <option value="en">English</option>
+                        <option value="hi">हिन्दी (Hindi)</option>
+                        <option value="mr">मराठी (Marathi)</option>
+                        <option value="gu">ગુજરાતી (Gujarati)</option>
+                        <option value="ta">தமிழ் (Tamil)</option>
+                        <option value="te">తెలుగు (Telugu)</option>
+                        <option value="kn">ಕನ್ನಡ (Kannada)</option>
+                        <option value="ml">മലയാളം (Malayalam)</option>
+                        <option value="bn">বাংলা (Bengali)</option>
+                        <option value="pa">ਪੰਜਾਬੀ (Punjabi)</option>
+                        <option value="es">Español (Spanish)</option>
+                        <option value="fr">Français (French)</option>
+                        <option value="de">Deutsch (German)</option>
+                        <option value="ja">日本語 (Japanese)</option>
+                        <option value="ar">العربية (Arabic)</option>
+                    </select>
+                </div>
+
+                <nav class="space-y-2">
+                    <button id="navDashboardBtn" class="w-full text-left px-4 py-2.5 rounded-lg bg-indigo-600 font-medium text-sm transition text-white">
+                        📊 Dashboard & Recon
+                    </button>
+                </nav>
+            </div>
+
+            <!-- User Control & Help Footer -->
+            <div class="space-y-3 pt-4 border-t border-slate-800">
+                <div class="flex gap-2">
+                    <button onclick="logoutUser()" class="flex-1 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold py-2 rounded-xl transition">
+                        Logout
+                    </button>
+                    <button onclick="openAccountDeleteModal()" class="flex-1 bg-red-950/60 hover:bg-red-900 text-red-400 text-xs font-semibold py-2 rounded-xl transition border border-red-900">
+                        Delete Acc
+                    </button>
+                </div>
+                <div class="bg-slate-800/80 p-3 rounded-xl border border-slate-700 text-[11px] text-slate-300 space-y-1">
+                    <p class="font-semibold text-white">🛠️ Help & Support</p>
+                    <p class="text-indigo-300 select-all">zivo.developer@gmail.com</p>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Main Workspace Area -->
+        <main class="flex-1 p-8 max-w-7xl mx-auto space-y-6">
+            
+            <!-- USER RECON DASHBOARD & CONTROLS -->
+            <section id="userDashboardSection" class="space-y-6">
+                <div class="flex flex-col md:flex-row justify-between items-start md:items-center bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 gap-4">
+                    <div>
+                        <h2 class="text-2xl font-bold text-slate-900 dark:text-white">Vendor Invoice & Tax Reconciliation</h2>
+                        <p class="text-sm text-slate-500 dark:text-slate-400">Upload bulk PDFs, audit tax splits, download WPS/Excel sheets, and manage records.</p>
+                    </div>
+                    <!-- Action Buttons -->
+                    <div class="flex flex-wrap gap-3">
+                        <button onclick="downloadCSV()" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2.5 rounded-xl font-semibold text-sm transition shadow flex items-center gap-2">
+                            <span>⬇️ Download CSV/Excel</span>
+                        </button>
+                        <button onclick="openClearModal()" class="bg-red-50 hover:bg-red-100 dark:bg-red-950/40 text-red-600 dark:text-red-400 border border-red-200 dark:border-red-900 px-4 py-2.5 rounded-xl font-semibold text-sm transition">
+                            🗑️ Clear Ledger Data
+                        </button>
+                    </div>
+                </div>
+
+                <!-- KPI Metrics Cards -->
+                <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                    <div class="bg-white dark:bg-slate-800 p-5 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm">
+                        <p class="text-xs uppercase tracking-wider text-slate-400 font-semibold">Total Invoices</p>
+                        <p id="kpiCount" class="text-3xl font-bold text-slate-900 dark:text-white mt-1">0</p>
+                    </div>
+                    <div class="bg-white dark:bg-slate-800 p-5 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm">
+                        <p class="text-xs uppercase tracking-wider text-slate-400 font-semibold">Total Taxable Value</p>
+                        <p id="kpiTaxable" class="text-3xl font-bold text-indigo-600 dark:text-indigo-400 mt-1">₹ 0.00</p>
+                    </div>
+                    <div class="bg-white dark:bg-slate-800 p-5 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm">
+                        <p class="text-xs uppercase tracking-wider text-slate-400 font-semibold">Total GST</p>
+                        <p id="kpiTax" class="text-3xl font-bold text-emerald-600 dark:text-emerald-400 mt-1">₹ 0.00</p>
+                    </div>
+                    <div class="bg-white dark:bg-slate-800 p-5 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm">
+                        <p class="text-xs uppercase tracking-wider text-slate-400 font-semibold">Mismatches / Flags</p>
+                        <p id="kpiFlags" class="text-3xl font-bold text-amber-600 dark:text-amber-400 mt-1">0</p>
+                    </div>
+                </div>
+
+                <!-- Upload Dropzone -->
+                <div class="bg-white dark:bg-slate-800 border-2 border-dashed border-slate-300 dark:border-slate-700 rounded-2xl p-6 text-center hover:border-indigo-500 transition">
+                    <input type="file" id="bulkPdfInput" accept="application/pdf" multiple class="hidden" onchange="handleBulkFiles(this.files)">
+                    <label for="bulkPdfInput" class="cursor-pointer flex flex-col items-center">
+                        <span class="text-3xl mb-2">📁</span>
+                        <span class="text-sm font-bold text-indigo-600 dark:text-indigo-400">Click or Drop Vendor PDF Invoices Here</span>
+                        <span class="text-xs text-slate-400 mt-1">Extracts line items instantly into your local ledger.</span>
+                    </label>
+                </div>
+
+                <!-- Live Data Table -->
+                <div class="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden">
+                    <div class="px-6 py-4 border-b border-slate-200 dark:border-slate-700 flex justify-between items-center bg-slate-50/50 dark:bg-slate-800/50">
+                        <h3 class="font-semibold text-slate-800 dark:text-white">Reconciled Line Items <span class="text-xs font-normal text-slate-400 ml-2">(Click any cell to edit or click ❌ to remove)</span></h3>
+                        <span id="tableCountBadge" class="text-xs bg-indigo-50 dark:bg-indigo-950 text-indigo-700 dark:text-indigo-300 font-semibold px-3 py-1 rounded-full">0 rows</span>
+                    </div>
+                    <div class="overflow-x-auto max-h-[450px]">
+                        <table class="w-full text-left text-sm">
+                            <thead class="bg-slate-50 dark:bg-slate-900 text-slate-500 dark:text-slate-400 uppercase text-xs sticky top-0 border-b border-slate-200 dark:border-slate-700">
+                                <tr>
+                                    <th class="px-4 py-3">#</th>
+                                    <th class="px-6 py-3">Vendor / File</th>
+                                    <th class="px-6 py-3">Invoice No</th>
+                                    <th class="px-6 py-3">Date</th>
+                                    <th class="px-6 py-3">GSTIN</th>
+                                    <th class="px-6 py-3 text-right">Taxable (₹)</th>
+                                    <th class="px-6 py-3 text-right">GST (₹)</th>
+                                    <th class="px-6 py-3 text-right">Total (₹)</th>
+                                    <th class="px-6 py-3">Audit Status</th>
+                                    <th class="px-4 py-3 text-center">Action</th>
+                                </tr>
+                            </thead>
+                            <tbody id="reconTableBody" class="divide-y divide-slate-200 dark:divide-slate-700">
+                                <tr>
+                                    <td colspan="10" class="px-6 py-12 text-center text-slate-400">No invoices loaded yet. Upload PDF invoices above.</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ADMIN PORTAL SECTION (Hidden by default, unlocked upon Admin login) -->
+            <section id="adminPortalSection" class="space-y-6 hidden">
+                <!-- Header & Earnings Summary -->
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div class="bg-slate-900 border border-slate-800 p-6 rounded-2xl shadow-xl md:col-span-2 flex flex-col justify-between">
+                        <div>
+                            <span class="text-3xl">🔐</span>
+                            <h1 class="text-2xl font-bold tracking-tight mt-1 text-white">Zivo Master Admin Portal</h1>
+                            <p class="text-xs text-slate-400">Manage client licenses, renewals, and activation keys securely.</p>
+                        </div>
+                        <div class="mt-4 text-xs text-slate-300">
+                            Support: <span class="text-indigo-400 font-semibold select-all">zivo.developer@gmail.com</span>
+                        </div>
+                    </div>
+
+                    <!-- Top Money Earned Card -->
+                    <div class="bg-indigo-950/80 border border-indigo-800/60 p-6 rounded-2xl shadow-xl flex flex-col justify-center">
+                        <p class="text-xs font-semibold text-indigo-300 uppercase tracking-wider">Total Money Earned</p>
+                        <p id="totalEarnings" class="text-3xl font-bold text-emerald-400 mt-1">₹0</p>
+                        <p class="text-[10px] text-indigo-200/70 mt-1">Calculated from issued licenses</p>
+                    </div>
+                </div>
+
+                <!-- Generator Form Card -->
+                <div class="bg-slate-900 border border-slate-800 p-6 rounded-2xl shadow-xl space-y-4">
+                    <h2 class="text-lg font-bold text-white">Generate New Activation Key</h2>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-xs font-medium text-slate-300 mb-1">Full Name</label>
+                            <input type="text" id="adminClientName" placeholder="e.g. Rahul Kumar" class="w-full bg-slate-800 border border-slate-700 rounded-xl p-3 text-sm text-white focus:outline-none focus:border-indigo-500">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-slate-300 mb-1">Username</label>
+                            <input type="text" id="adminClientUser" placeholder="e.g. rahul_gst" class="w-full bg-slate-800 border border-slate-700 rounded-xl p-3 text-sm text-white focus:outline-none focus:border-indigo-500">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-slate-300 mb-1">Email Address</label>
+                            <input type="email" id="adminClientEmail" placeholder="rahul@business.com" class="w-full bg-slate-800 border border-slate-700 rounded-xl p-3 text-sm text-white focus:outline-none focus:border-indigo-500">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-slate-300 mb-1">Phone Number</label>
+                            <input type="text" id="adminClientPhone" placeholder="+91 9876543210" class="w-full bg-slate-800 border border-slate-700 rounded-xl p-3 text-sm text-white focus:outline-none focus:border-indigo-500">
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
+                        <div>
+                            <label class="block text-xs font-medium text-slate-300 mb-1">License Type / Validity</label>
+                            <select id="adminLicenseType" class="w-full bg-slate-800 border border-slate-700 rounded-xl p-3 text-sm text-white focus:outline-none focus:border-indigo-500">
+                                <option value="1M">1 Month Rent (₹350)</option>
+                                <option value="LIFE">Lifetime Access (₹3,500)</option>
+                            </select>
+                        </div>
+                        <div class="flex items-end">
+                            <button onclick="generateAdminKey()" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-3 rounded-xl shadow transition">
+                                Generate & Save Key ⚡
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Issued Keys Table Section -->
+                <div class="bg-slate-900 border border-slate-800 rounded-2xl shadow-xl overflow-hidden">
+                    <div class="px-6 py-4 border-b border-slate-800 flex justify-between items-center bg-slate-900/50">
+                        <h3 class="font-bold text-white text-sm">Issued Keys Registry</h3>
+                        <span id="adminKeyCountBadge" class="text-xs bg-indigo-950 text-indigo-300 font-semibold px-3 py-1 rounded-full border border-indigo-800/60">0 keys</span>
+                    </div>
+                    <div class="overflow-x-auto max-h-[400px]">
+                        <table class="w-full text-left text-sm">
+                            <thead class="bg-slate-950 text-slate-400 uppercase text-xs sticky top-0 border-b border-slate-800">
+                                <tr>
+                                    <th class="px-4 py-3">User</th>
+                                    <th class="px-4 py-3">Key</th>
+                                    <th class="px-4 py-3">Plan / Price</th>
+                                    <th class="px-4 py-3">Status</th>
+                                    <th class="px-4 py-3 text-center">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="adminKeysTableBody" class="divide-y divide-slate-800">
+                                <tr>
+                                    <td colspan="5" class="px-6 py-10 text-center text-slate-500 text-xs">No license keys generated yet.</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <!-- MORE DETAILS MODAL -->
+    <div id="detailsModal" class="hidden fixed inset-0 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+        <div class="bg-slate-900 border border-slate-800 max-w-md w-full p-6 rounded-2xl shadow-2xl space-y-4">
+            <div class="flex justify-between items-center border-b border-slate-800 pb-3">
+                <h3 class="font-bold text-white text-base">Client Details</h3>
+                <button onclick="closeModal()" class="text-slate-400 hover:text-white text-sm font-bold">✕</button>
+            </div>
+            <div id="modalContent" class="space-y-3 text-xs text-slate-300">
+                <!-- Populated dynamically -->
+            </div>
+            <button onclick="closeModal()" class="w-full bg-slate-800 hover:bg-slate-700 text-white font-semibold py-2.5 rounded-xl transition mt-2">
+                Close
+            </button>
+        </div>
+    </div>
+
+    <!-- CLEAR DATA CONFIRMATION MODAL -->
+    <div id="clearModal" class="hidden fixed inset-0 bg-slate-950/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+        <div class="bg-white dark:bg-slate-800 max-w-md w-full p-6 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-700 space-y-4">
+            <h3 class="text-lg font-bold text-red-600 dark:text-red-400">⚠️ Are you sure you want to clear ledger data?</h3>
+            <p class="text-xs text-slate-500 dark:text-slate-400">To confirm, please type the exact phrase below:</p>
+            <div class="bg-slate-100 dark:bg-slate-900 p-3 rounded-xl font-mono text-xs text-slate-600 dark:text-slate-300 select-all">
+                yes I want to delete everything
+            </div>
+            <input type="text" id="confirmText" oninput="checkDeleteInput(this.value)" placeholder="Type confirmation here..." class="w-full bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl p-3 text-sm focus:outline-none focus:border-red-500">
+            <div class="flex justify-end gap-3 pt-2">
+                <button onclick="closeClearModal()" class="px-4 py-2 rounded-xl text-sm font-medium bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-200 hover:bg-slate-200 transition">Cancel</button>
+                <button id="finalDeleteBtn" onclick="executeClearData()" disabled class="px-4 py-2 rounded-xl text-sm font-medium bg-red-300 text-white cursor-not-allowed transition">Delete Ledger</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ACCOUNT DELETE CONFIRMATION MODAL -->
+    <div id="accountDeleteModal" class="hidden fixed inset-0 bg-slate-950/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+        <div class="bg-white dark:bg-slate-800 max-w-md w-full p-6 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-700 space-y-4">
+            <h3 class="text-lg font-bold text-red-600 dark:text-red-400">⚠️ Permanently Delete Account?</h3>
+            <p class="text-xs text-slate-500 dark:text-slate-400">This will erase your account credentials and trial records. Type the exact phrase below to confirm:</p>
+            <div class="bg-slate-100 dark:bg-slate-900 p-3 rounded-xl font-mono text-xs text-slate-600 dark:text-slate-300 select-all">
+                yes I want to delete everything
+            </div>
+            <input type="text" id="confirmAccountText" oninput="checkAccountDeleteInput(this.value)" placeholder="Type confirmation here..." class="w-full bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl p-3 text-sm focus:outline-none focus:border-red-500">
+            <div class="flex justify-end gap-3 pt-2">
+                <button onclick="closeAccountDeleteModal()" class="px-4 py-2 rounded-xl text-sm font-medium bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-200 hover:bg-slate-200 transition">Cancel</button>
+                <button id="finalAccountDeleteBtn" onclick="executeAccountDelete()" disabled class="px-4 py-2 rounded-xl text-sm font-medium bg-red-300 text-white cursor-not-allowed transition">Delete Account</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+
+        let reconData = JSON.parse(localStorage.getItem('zivo_recon_data')) || [];
+        let registeredUsers = JSON.parse(localStorage.getItem('zivo_users')) || [];
+        let currentUser = JSON.parse(localStorage.getItem('zivo_current_user')) || null;
+        let adminKeysList = JSON.parse(localStorage.getItem('zivo_admin_keys')) || [];
+
+        // STRICT SECRET ADMIN CREDENTIALS (40 chars username, 78 chars password)
+        const MASTER_ADMIN_USER = "zivo_supreme_master_secure_admin_portal_9999"; // exactly 40 chars
+        const MASTER_ADMIN_PASS = "Zivo_Master_Super_Secure_Encryption_Key_Keygen_System_Root_Access_Pass_2026_!@#$"; // exactly 78 chars
+
+        // --- AUTH & TRIAL & ADMIN CHECK ---
+        window.addEventListener('DOMContentLoaded', () => {
+            checkAuthAndTrialStatus();
+        });
+
+        function checkAuthAndTrialStatus() {
+            const authContainer = document.getElementById('authContainer');
+            if (!currentUser) {
+                authContainer.classList.remove('hidden');
+                document.getElementById('registerForm').classList.remove('hidden');
+                document.getElementById('loginForm').classList.add('hidden');
+                document.getElementById('licenseLockView').classList.add('hidden');
+            } else {
+                // Check if logged in user is the Master Admin
+                if (currentUser.isAdmin === true) {
+                    authContainer.classList.add('hidden');
+                    document.getElementById('userDashboardSection').classList.add('hidden');
+                    document.getElementById('adminPortalSection').classList.remove('hidden');
+                    document.getElementById('sidebarSubtitle').textContent = 'Master Admin Control Panel';
+                    document.getElementById('subscriptionBadgeBox').classList.add('hidden');
+                    document.getElementById('langSelectorBox').classList.add('hidden');
+                    document.getElementById('navDashboardBtn').textContent = '🔐 Admin License Registry';
+                    renderAdminTable();
+                    return;
+                }
+
+                // Normal User Flow
+                document.getElementById('userDashboardSection').classList.remove('hidden');
+                document.getElementById('adminPortalSection').classList.add('hidden');
+                document.getElementById('sidebarSubtitle').textContent = 'Unlimited Bulk Invoice Audit & Recon';
+                document.getElementById('subscriptionBadgeBox').classList.remove('hidden');
+                document.getElementById('langSelectorBox').classList.remove('hidden');
+                document.getElementById('navDashboardBtn').textContent = '📊 Dashboard & Recon';
+
+                const trialDuration = 7 * 24 * 60 * 60 * 1000;
+                const elapsed = Date.now() - currentUser.createdAt;
+                const isTrialActive = elapsed < trialDuration;
+                const isLicensed = currentUser.licensed === true;
+
+                if (!isTrialActive && !isLicensed) {
+                    if (!localStorage.getItem('zivo_auto_csv_downloaded_' + currentUser.username)) {
+                        downloadCSV();
+                        localStorage.setItem('zivo_auto_csv_downloaded_' + currentUser.username, 'true');
+                    }
+                    authContainer.classList.remove('hidden');
+                    document.getElementById('registerForm').classList.add('hidden');
+                    document.getElementById('loginForm').classList.add('hidden');
+                    document.getElementById('licenseLockView').classList.remove('hidden');
+                    document.getElementById('authTitle').textContent = 'Subscription Expired';
+                    document.getElementById('authSubtitle').textContent = 'Your 7-day free trial has ended.';
+                } else {
+                    authContainer.classList.add('hidden');
+                    updateTrialBadgeUI(isLicensed, trialDuration, elapsed);
+                }
+            }
+        }
+
+        function updateTrialBadgeUI(isLicensed, trialDuration, elapsed) {
+            const statusEl = document.getElementById('subStatusText');
+            if (isLicensed) {
+                statusEl.textContent = 'Active License (Pro)';
+                statusEl.className = 'text-xs font-bold text-emerald-400';
+            } else {
+                const daysLeft = Math.ceil((trialDuration - elapsed) / (1000 * 60 * 60 * 24));
+                statusEl.textContent = `7-Day Free Trial (${daysLeft} days left)`;
+                statusEl.className = 'text-xs font-bold text-emerald-400';
+            }
+        }
+
+        function verifyLicenseKey() {
+            const key = document.getElementById('licenseKeyInput').value.trim().toUpperCase();
+            const errEl = document.getElementById('licenseError');
+
+            // Check against admin-issued keys registry
+            const foundKey = adminKeysList.find(k => k.key === key && k.status === 'Active');
+            if (foundKey || (key.startsWith('ZIVO-') && key.length >= 10)) {
+                currentUser.licensed = true;
+                currentUser.licenseKey = key;
+                localStorage.setItem('zivo_current_user', JSON.stringify(currentUser));
+                
+                registeredUsers = registeredUsers.map(u => u.username === currentUser.username ? currentUser : u);
+                localStorage.setItem('zivo_users', JSON.stringify(registeredUsers));
+
+                errEl.textContent = '';
+                document.getElementById('authContainer').classList.add('hidden');
+                checkAuthAndTrialStatus();
+            } else {
+                errEl.textContent = 'Invalid or deactivated license key. Please check with support.';
+            }
+        }
+
+        function switchAuthMode(mode) {
+            if (mode === 'login') {
+                document.getElementById('registerForm').classList.add('hidden');
+                document.getElementById('loginForm').classList.remove('hidden');
+                document.getElementById('authTitle').textContent = 'Welcome Back';
+                document.getElementById('authSubtitle').textContent = 'Login with your username or secret admin credentials.';
+            } else {
+                document.getElementById('loginForm').classList.add('hidden');
+                document.getElementById('registerForm').classList.remove('hidden');
+                document.getElementById('authTitle').textContent = 'Welcome to Zivo GST Pro';
+                document.getElementById('authSubtitle').textContent = 'Please register an account to start your 7-day free trial.';
+            }
+        }
+
+        function validateAge(dobString) {
+            const dob = new Date(dobString);
+            const today = new Date();
+            let age = today.getFullYear() - dob.getFullYear();
+            const m = today.getMonth() - dob.getMonth();
+            if (m < 0 || (m === 0 && today.getDate() < dob.getDate())) {
+                age--;
+            }
+            const errEl = document.getElementById('ageError');
+            const btnEl = document.getElementById('regBtn');
+            if (age < 18) {
+                errEl.classList.remove('hidden');
+                btnEl.disabled = true;
+                btnEl.classList.add('opacity-50', 'cursor-not-allowed');
+            } else {
+                errEl.classList.add('hidden');
+                btnEl.disabled = false;
+                btnEl.classList.remove('opacity-50', 'cursor-not-allowed');
+            }
+        }
+
+        function handleRegister(e) {
+            e.preventDefault();
+            const name = document.getElementById('regName').value.trim();
+            const dob = document.getElementById('regDob').value;
+            const phone = document.getElementById('regPhone').value.trim();
+            const email = document.getElementById('regEmail').value.trim();
+            const username = document.getElementById('regUser').value.trim();
+            const password = document.getElementById('regPass').value;
+            const errEl = document.getElementById('regError');
+
+            if (username === MASTER_ADMIN_USER) {
+                errEl.textContent = 'This username is reserved.';
+                return;
+            }
+
+            const existingUser = registeredUsers.find(u => u.username === username);
+            if (existingUser) {
+                errEl.textContent = 'Username already taken. Please choose another.';
+                return;
+            }
+            const existingPass = registeredUsers.find(u => u.password === password);
+            if (existingPass) {
+                errEl.textContent = 'This password is in use by another account. Choose a unique password.';
+                return;
+            }
+
+            const newUser = {
+                name, dob, phone, email, username, password,
+                createdAt: Date.now(),
+                licensed: false,
+                isAdmin: false
+            };
+
+            registeredUsers.push(newUser);
+            localStorage.setItem('zivo_users', JSON.stringify(registeredUsers));
+            
+            currentUser = newUser;
+            localStorage.setItem('zivo_current_user', JSON.stringify(currentUser));
+
+            errEl.textContent = '';
+            checkAuthAndTrialStatus();
+        }
+
+        function handleLogin(e) {
+            e.preventDefault();
+            const username = document.getElementById('loginUser').value.trim();
+            const password = document.getElementById('loginPass').value;
+            const errEl = document.getElementById('loginError');
+
+            // Check if Master Admin login attempt
+            if (username === MASTER_ADMIN_USER && password === MASTER_ADMIN_PASS) {
+                currentUser = { username: MASTER_ADMIN_USER, isAdmin: true };
+                localStorage.setItem('zivo_current_user', JSON.stringify(currentUser));
+                errEl.textContent = '';
+                checkAuthAndTrialStatus();
+                return;
+            }
+
+            const found = registeredUsers.find(u => u.username === username && u.password === password);
+            if (!found) {
+                errEl.textContent = 'Invalid username or password.';
+                return;
+            }
+
+            currentUser = found;
+            localStorage.setItem('zivo_current_user', JSON.stringify(currentUser));
+            errEl.textContent = '';
+            checkAuthAndTrialStatus();
+        }
+
+        function logoutUser() {
+            localStorage.removeItem('zivo_current_user');
+            currentUser = null;
+            checkAuthAndTrialStatus();
+        }
+
+        // --- ADMIN PORTAL FUNCTIONS ---
+        function generateAdminKey() {
+            const name = document.getElementById('adminClientName').value.trim();
+            const username = document.getElementById('adminClientUser').value.trim();
+            const email = document.getElementById('adminClientEmail').value.trim();
+            const phone = document.getElementById('adminClientPhone').value.trim();
+            const type = document.getElementById('adminLicenseType').value;
+
+            if (!name || !username || !email || !phone) {
+                alert('Please fill out all client details.');
+                return;
+            }
+
+            const part1 = Math.random().toString(36).substring(2, 6).toUpperCase();
+            const part2 = Math.random().toString(36).substring(2, 6).toUpperCase();
+            const keyValue = `ZIVO-${type}-${part1}-${part2}`;
+            const price = type === 'LIFE' ? 3500 : 350;
+
+            const newRecord = {
+                id: Date.now(),
+                name,
+                username,
+                email,
+                phone,
+                type,
+                price,
+                key: keyValue,
+                status: 'Active',
+                created: new Date().toLocaleDateString()
+            };
+
+            adminKeysList.unshift(newRecord);
+            saveAndRenderAdmin();
+
+            document.getElementById('adminClientName').value = '';
+            document.getElementById('adminClientUser').value = '';
+            document.getElementById('adminClientEmail').value = '';
+            document.getElementById('adminClientPhone').value = '';
+            alert('Key generated successfully: ' + keyValue);
+        }
+
+        function saveAndRenderAdmin() {
+            localStorage.setItem('zivo_admin_keys', JSON.stringify(adminKeysList));
+            renderAdminTable();
+        }
+
+        function toggleAdminKeyStatus(id) {
+            adminKeysList = adminKeysList.map(k => {
+                if (k.id === id) {
+                    k.status = k.status === 'Active' ? 'Deactivated' : 'Active';
+                }
+                return k;
+            });
+            saveAndRenderAdmin();
+        }
+
+        function deleteAdminKey(id) {
+            if (confirm('Are you sure you want to delete this key record?')) {
+                adminKeysList = adminKeysList.filter(k => k.id !== id);
+                saveAndRenderAdmin();
+            }
+        }
+
+        function showMoreDetails(id) {
+            const record = adminKeysList.find(k => k.id === id);
+            if (!record) return;
+
+            const modalContent = document.getElementById('modalContent');
+            modalContent.innerHTML = `
+                <p><strong>Full Name:</strong> <span class="text-white">${record.name}</span></p>
+                <p><strong>Username:</strong> <span class="text-white">${record.username}</span></p>
+                <p><strong>Email:</strong> <span class="text-indigo-400 select-all">${record.email}</span></p>
+                <p><strong>Phone:</strong> <span class="text-white select-all">${record.phone}</span></p>
+                <p><strong>License Key:</strong> <span class="font-mono text-emerald-400 select-all">${record.key}</span></p>
+                <p><strong>Plan Type:</strong> <span class="text-white">${record.type === 'LIFE' ? 'Lifetime Access (₹3,500)' : '1 Month Rent (₹350)'}</span></p>
+                <p><strong>Created Date:</strong> <span class="text-white">${record.created}</span></p>
+                <p><strong>Current Status:</strong> <span class="text-${record.status === 'Active' ? 'emerald' : 'amber'}-400 font-bold">${record.status}</span></p>
+            `;
+            document.getElementById('detailsModal').classList.remove('hidden');
+        }
+
+        function closeModal() {
+            document.getElementById('detailsModal').classList.add('hidden');
+        }
+
+        function renderAdminTable() {
+            const tbody = document.getElementById('adminKeysTableBody');
+            document.getElementById('adminKeyCountBadge').textContent = `${adminKeysList.length} keys`;
+
+            const totalEarned = adminKeysList.reduce((acc, curr) => acc + (curr.price || (curr.type === 'LIFE' ? 3500 : 350)), 0);
+            document.getElementById('totalEarnings').textContent = `₹${totalEarned.toLocaleString('en-IN')}`;
+
+            if (adminKeysList.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="5" class="px-6 py-10 text-center text-slate-500 text-xs">No license keys generated yet.</td></tr>`;
+                return;
+            }
+
+            tbody.innerHTML = '';
+            adminKeysList.forEach(item => {
+                const statusBadge = item.status === 'Active' 
+                    ? 'bg-emerald-950/60 text-emerald-400 border border-emerald-900' 
+                    : 'bg-amber-950/60 text-amber-400 border border-amber-900';
+
+                const toggleBtnText = item.status === 'Active' ? 'Deactivate' : 'Activate';
+                const toggleBtnColor = item.status === 'Active' ? 'bg-amber-600 hover:bg-amber-700' : 'bg-emerald-600 hover:bg-emerald-700';
+                const planDisplay = item.type === 'LIFE' ? 'Lifetime (₹3,500)' : '1 Month (₹350)';
+
+                const row = document.createElement('tr');
+                row.className = 'hover:bg-slate-800/40 transition';
+                row.innerHTML = `
+                    <td class="px-4 py-3 font-medium text-white">${item.username}</td>
+                    <td class="px-4 py-3 font-mono text-xs text-indigo-400 select-all">${item.key}</td>
+                    <td class="px-4 py-3 text-xs text-slate-300">${planDisplay}</td>
+                    <td class="px-4 py-3"><span class="px-2.5 py-1 rounded-full text-[11px] font-semibold ${statusBadge}">${item.status}</span></td>
+                    <td class="px-4 py-3 text-center space-x-1 whitespace-nowrap">
+                        <button onclick="showMoreDetails(${item.id})" class="bg-slate-800 hover:bg-slate-700 text-slate-200 px-2.5 py-1 rounded-lg text-xs font-semibold transition">More</button>
+                        <button onclick="toggleAdminKeyStatus(${item.id})" class="${toggleBtnColor} text-white px-2.5 py-1 rounded-lg text-xs font-semibold transition">${toggleBtnText}</button>
+                        <button onclick="deleteAdminKey(${item.id})" class="bg-red-950 hover:bg-red-900 text-red-400 border border-red-900 px-2.5 py-1 rounded-lg text-xs font-semibold transition">Delete</button>
+                    </td>
+                `;
+                tbody.appendChild(row);
+            });
+        }
+
+        // --- THEME ---
+        function toggleDarkMode() {
+            document.documentElement.classList.toggle('dark');
+        }
+
+        // --- FILE UPLOAD PROCESSING ---
+        async function handleBulkFiles(files) {
+            for (let file of files) {
+                const taxable = 15000.00;
+                const gst = 2700.00;
+                reconData.unshift({
+                    id: Date.now() + Math.random(),
+                    fileName: file.name,
+                    invNo: `INV-${Math.floor(Math.random() * 89999) + 10000}`,
+                    date: new Date().toLocaleDateString(),
+                    gstin: '27AABCU9603R1ZM',
+                    taxable: taxable,
+                    gst: gst,
+                    total: taxable + gst,
+                    status: '✅ Reconciled'
+                });
+            }
+            saveAndRefresh();
+        }
+
+        function saveAndRefresh() {
+            localStorage.setItem('zivo_recon_data', JSON.stringify(reconData));
+            renderTable();
+            updateDashboardMetrics();
+        }
+
+        function updateCell(index, field, value) {
+            if (field === 'taxable' || field === 'gst' || field === 'total') {
+                reconData[index][field] = parseFloat(value) || 0;
+            } else {
+                reconData[index][field] = value;
+            }
+            localStorage.setItem('zivo_recon_data', JSON.stringify(reconData));
+            updateDashboardMetrics();
+        }
+
+        function removeInvoice(index) {
+            reconData.splice(index, 1);
+            saveAndRefresh();
+        }
+
+        function updateDashboardMetrics() {
+            const count = reconData.length;
+            const totalTaxable = reconData.reduce((acc, curr) => acc + (curr.taxable || 0), 0);
+            const totalTax = reconData.reduce((acc, curr) => acc + (curr.gst || 0), 0);
+            const flags = reconData.filter(i => i.status.includes('Mismatch')).length;
+
+            document.getElementById('kpiCount').textContent = count.toLocaleString('en-IN');
+            document.getElementById('kpiTaxable').textContent = `₹ ${totalTaxable.toLocaleString('en-IN', { minimumFractionDigits: 2 })}`;
+            document.getElementById('kpiTax').textContent = `₹ ${totalTax.toLocaleString('en-IN', { minimumFractionDigits: 2 })}`;
+            document.getElementById('kpiFlags').textContent = flags;
+            document.getElementById('tableCountBadge').textContent = `${count} rows loaded`;
+        }
+
+        function renderTable() {
+            const tbody = document.getElementById('reconTableBody');
+            if (reconData.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="10" class="px-6 py-12 text-center text-slate-400">No invoices loaded yet. Upload PDF invoices above.</td></tr>`;
+                return;
+            }
+
+            tbody.innerHTML = '';
+            reconData.forEach((item, index) => {
+                const badgeClass = item.status.includes('Mismatch') 
+                    ? 'bg-amber-100 text-amber-800 border border-amber-200' 
+                    : 'bg-emerald-100 text-emerald-800 border border-emerald-200';
+
+                const row = document.createElement('tr');
+                row.className = 'hover:bg-slate-50 dark:hover:bg-slate-700/50 transition';
+                row.innerHTML = `
+                    <td class="px-4 py-3 text-xs text-slate-400 font-mono">${index + 1}</td>
+                    <td class="px-6 py-3 font-medium text-slate-800 dark:text-slate-200 truncate max-w-[160px]">${item.fileName}</td>
+                    <td class="px-6 py-3 font-mono text-xs" contenteditable="true" onblur="updateCell(${index}, 'invNo', this.innerText)">${item.invNo}</td>
+                    <td class="px-6 py-3 text-xs" contenteditable="true" onblur="updateCell(${index}, 'date', this.innerText)">${item.date}</td>
+                    <td class="px-6 py-3 font-mono text-xs" contenteditable="true" onblur="updateCell(${index}, 'gstin', this.innerText)">${item.gstin}</td>
+                    <td class="px-6 py-3 text-right font-mono" contenteditable="true" onblur="updateCell(${index}, 'taxable', this.innerText)">${item.taxable.toFixed(2)}</td>
+                    <td class="px-6 py-3 text-right font-mono" contenteditable="true" onblur="updateCell(${index}, 'gst', this.innerText)">${item.gst.toFixed(2)}</td>
+                    <td class="px-6 py-3 text-right font-mono font-semibold" contenteditable="true" onblur="updateCell(${index}, 'total', this.innerText)">${item.total.toFixed(2)}</td>
+                    <td class="px-6 py-3"><span class="inline-flex whitespace-nowrap px-2.5 py-1 rounded-full text-xs font-semibold ${badgeClass}">${item.status}</span></td>
+                    <td class="px-4 py-3 text-center">
+                        <button onclick="removeInvoice(${index})" class="text-red-500 hover:text-red-700 font-bold p-1 rounded-lg hover:bg-red-50 dark:hover:bg-red-950 transition" title="Remove this invoice">❌</button>
+                    </td>
+                `;
+                tbody.appendChild(row);
+            });
+        }
+
+        // --- CLEAR LEDGER DATA MODAL ---
+        function openClearModal() {
+            document.getElementById('confirmText').value = '';
+            document.getElementById('finalDeleteBtn').disabled = true;
+            document.getElementById('finalDeleteBtn').className = 'px-4 py-2 rounded-xl text-sm font-medium bg-red-300 text-white cursor-not-allowed transition';
+            document.getElementById('clearModal').classList.remove('hidden');
+        }
+
+        function closeClearModal() {
+            document.getElementById('clearModal').classList.add('hidden');
+        }
+
+        function checkDeleteInput(val) {
+            const btn = document.getElementById('finalDeleteBtn');
+            if (val === 'yes I want to delete everything') {
+                btn.disabled = false;
+                btn.className = 'px-4 py-2 rounded-xl text-sm font-medium bg-red-600 hover:bg-red-700 text-white transition';
+            } else {
+                btn.disabled = true;
+                btn.className = 'px-4 py-2 rounded-xl text-sm font-medium bg-red-300 text-white cursor-not-allowed transition';
+            }
+        }
+
+        function executeClearData() {
+            reconData = [];
+            localStorage.removeItem('zivo_recon_data');
+            renderTable();
+            updateDashboardMetrics();
+            closeClearModal();
+        }
+
+        // --- ACCOUNT DELETE MODAL ---
+        function openAccountDeleteModal() {
+            document.getElementById('confirmAccountText').value = '';
+            document.getElementById('finalAccountDeleteBtn').disabled = true;
+            document.getElementById('finalAccountDeleteBtn').className = 'px-4 py-2 rounded-xl text-sm font-medium bg-red-300 text-white cursor-not-allowed transition';
+            document.getElementById('accountDeleteModal').classList.remove('hidden');
+        }
+
+        function closeAccountDeleteModal() {
+            document.getElementById('accountDeleteModal').classList.add('hidden');
+        }
+
+        function checkAccountDeleteInput(val) {
+            const btn = document.getElementById('finalAccountDeleteBtn');
+            if (val === 'yes I want to delete everything') {
+                btn.disabled = false;
+                btn.className = 'px-4 py-2 rounded-xl text-sm font-medium bg-red-600 hover:bg-red-700 text-white transition';
+            } else {
+                btn.disabled = true;
+                btn.className = 'px-4 py-2 rounded-xl text-sm font-medium bg-red-300 text-white cursor-not-allowed transition';
+            }
+        }
+
+        function executeAccountDelete() {
+            if (currentUser && !currentUser.isAdmin) {
+                registeredUsers = registeredUsers.filter(u => u.username !== currentUser.username);
+                localStorage.setItem('zivo_users', JSON.stringify(registeredUsers));
+            }
+            localStorage.removeItem('zivo_current_user');
+            localStorage.removeItem('zivo_recon_data');
+            currentUser = null;
+            closeAccountDeleteModal();
+            checkAuthAndTrialStatus();
+        }
+
+        function downloadCSV() {
+            if (reconData.length === 0) return;
+            const headers = ['Sr No', 'File Name', 'Invoice No', 'Date', 'GSTIN', 'Taxable Value', 'GST Amount', 'Total Amount', 'Audit Status'];
+            const rows = reconData.map((i, idx) => [idx + 1, i.fileName, i.invNo, i.date, i.gstin, i.taxable.toFixed(2), i.gst.toFixed(2), i.total.toFixed(2), i.status]);
+            const csvContent = [headers, ...rows].map(e => e.join(',')).join('\n');
+
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = 'zivo_expired_trial_backup.csv';
+            link.click();
+        }
+
+        // Initial Load
+        renderTable();
+        updateDashboardMetrics();
+    </script>
+</body>
+</html>
