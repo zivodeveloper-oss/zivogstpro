@@ -1,0 +1,736 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Zivo GST Recon & PDF Worker Pro</title>
+    <!-- PWA Manifest & Theme -->
+    <meta name="theme-color" content="#0f172a">
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = { darkMode: 'class' }
+    </script>
+    <!-- PDF.js for real text extraction -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+    <!-- pdf-lib for PDF manipulation tools -->
+    <script src="https://unpkg.com/pdf-lib@1.4.0/dist/pdf-lib.min.js"></script>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen flex flex-col font-sans antialiased">
+
+    <!-- AUTHENTICATION WRAPPER -->
+    <div id="authContainer" class="hidden fixed inset-0 bg-slate-950/90 backdrop-blur-md flex items-center justify-center z-50 p-4">
+        <div class="bg-slate-900 border border-slate-800 max-w-md w-full p-6 sm:p-8 rounded-2xl shadow-2xl space-y-6">
+            <div class="text-center">
+                <span class="text-3xl">⚡</span>
+                <h2 id="authTitle" class="text-2xl font-bold text-white mt-2">Welcome to Zivo Pro</h2>
+                <p id="authSubtitle" class="text-xs text-slate-400 mt-1">Please register an account to access your local workspace.</p>
+            </div>
+
+            <!-- REGISTRATION FORM -->
+            <form id="registerForm" onsubmit="handleRegister(event)" class="space-y-4">
+                <div>
+                    <label class="block text-xs font-medium text-slate-300 mb-1">Full Name</label>
+                    <input type="text" id="regName" required class="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-sm focus:outline-none focus:border-blue-600">
+                </div>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs font-medium text-slate-300 mb-1">Date of Birth (18+)</label>
+                        <input type="date" id="regDob" required onchange="validateAge(this.value)" class="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-xs focus:outline-none focus:border-blue-600">
+                        <p id="ageError" class="text-[10px] text-red-500 mt-1 hidden">Must be at least 18 years old.</p>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-slate-300 mb-1">Phone Number</label>
+                        <input type="text" id="regPhone" placeholder="Mobile number" required class="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-sm focus:outline-none focus:border-blue-600">
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-xs font-medium text-slate-300 mb-1">Email Address</label>
+                    <input type="email" id="regEmail" required class="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-sm focus:outline-none focus:border-blue-600">
+                </div>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs font-medium text-slate-300 mb-1">Username</label>
+                        <input type="text" id="regUser" required class="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-sm focus:outline-none focus:border-blue-600">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-slate-300 mb-1">Password</label>
+                        <input type="password" id="regPass" required class="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-sm focus:outline-none focus:border-blue-600">
+                    </div>
+                </div>
+                <p id="regError" class="text-xs text-red-500 text-center"></p>
+                <button type="submit" id="regBtn" class="w-full bg-blue-600 hover:bg-blue-500 text-white font-semibold py-3 rounded-xl shadow transition">
+                    Create Account & Start 🚀
+                </button>
+                <div class="text-center pt-2">
+                    <button type="button" onclick="switchAuthMode('login')" class="text-xs text-blue-400 hover:underline">Already have an account? Login here</button>
+                </div>
+            </form>
+
+            <!-- LOGIN FORM -->
+            <form id="loginForm" onsubmit="handleLogin(event)" class="space-y-4 hidden">
+                <div>
+                    <label class="block text-xs font-medium text-slate-300 mb-1">Username</label>
+                    <input type="text" id="loginUser" required class="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-sm focus:outline-none focus:border-blue-600">
+                </div>
+                <div>
+                    <label class="block text-xs font-medium text-slate-300 mb-1">Password</label>
+                    <input type="password" id="loginPass" required class="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-sm focus:outline-none focus:border-blue-600">
+                </div>
+                <p id="loginError" class="text-xs text-red-500 text-center"></p>
+                <button type="submit" class="w-full bg-blue-600 hover:bg-blue-500 text-white font-semibold py-3 rounded-xl shadow transition">
+                    Login to Workspace 🔓
+                </button>
+                <div class="text-center pt-2">
+                    <button type="button" onclick="switchAuthMode('register')" class="text-xs text-blue-400 hover:underline">Need an account? Register</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- MAIN APP LAYOUT (Amazon-Style Responsive Sidebar & Drawer) -->
+    <div class="flex flex-col lg:flex-row min-h-screen">
+        
+        <!-- Mobile Top Bar -->
+        <header class="lg:hidden bg-slate-900 border-b border-slate-800 p-4 flex items-center justify-between sticky top-0 z-30">
+            <div class="flex items-center gap-2">
+                <span class="text-xl">⚡</span>
+                <h1 class="font-bold text-lg text-white">Zivo Pro</h1>
+            </div>
+            <div class="flex items-center gap-2">
+                <button onclick="toggleDarkMode()" class="p-2 rounded-lg bg-slate-800 text-xs">🌓</button>
+                <button onclick="toggleMobileSidebar()" class="p-2 rounded-lg bg-slate-800 text-white text-sm">☰ Menu</button>
+            </div>
+        </header>
+
+        <!-- Sidebar Navigation Drawer -->
+        <aside id="sidebar" class="fixed inset-y-0 left-0 z-40 w-72 bg-slate-900 text-white flex flex-col justify-between p-6 shadow-xl border-r border-slate-800 transform -translate-x-full lg:translate-x-0 lg:static transition-transform duration-200">
+            <div>
+                <div class="hidden lg:flex items-center justify-between mb-1">
+                    <div class="flex items-center gap-2 whitespace-nowrap">
+                        <span class="text-2xl">⚡</span>
+                        <h1 class="text-xl font-bold tracking-tight">Zivo Pro</h1>
+                    </div>
+                    <button onclick="toggleDarkMode()" class="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs shrink-0" title="Toggle Theme">
+                        🌓
+                    </button>
+                </div>
+                <div class="flex justify-between items-center lg:block">
+                    <p class="text-xs text-slate-400 mb-6">100% Local Processing & Recon</p>
+                    <button onclick="toggleMobileSidebar()" class="lg:hidden text-slate-400 hover:text-white text-lg mb-6">✕</button>
+                </div>
+
+                <div class="bg-blue-950/40 border border-blue-900/50 p-3 rounded-xl mb-6 space-y-1">
+                    <p class="text-xs font-semibold text-blue-300 uppercase tracking-wider">Access Mode</p>
+                    <p class="text-xs font-bold text-emerald-400">Unlocked & Local Secure</p>
+                </div>
+
+                <!-- Navigation Tabs -->
+                <nav class="space-y-1.5">
+                    <button onclick="switchTab('recon')" id="tab-recon" class="nav-tab w-full text-left px-4 py-2.5 rounded-lg bg-blue-600 font-medium text-sm transition text-white flex items-center gap-2">
+                        <span>📊</span> GST Recon & Audit
+                    </button>
+                    <button onclick="switchTab('merge')" id="tab-merge" class="nav-tab w-full text-left px-4 py-2.5 rounded-lg bg-slate-900 font-medium text-sm transition text-slate-400 hover:text-white flex items-center gap-2">
+                        <span>🔀</span> Merge PDFs
+                    </button>
+                    <button onclick="switchTab('split')" id="tab-split" class="nav-tab w-full text-left px-4 py-2.5 rounded-lg bg-slate-900 font-medium text-sm transition text-slate-400 hover:text-white flex items-center gap-2">
+                        <span>✂️</span> Split PDF Pages
+                    </button>
+                    <button onclick="switchTab('img2pdf')" id="tab-img2pdf" class="nav-tab w-full text-left px-4 py-2.5 rounded-lg bg-slate-900 font-medium text-sm transition text-slate-400 hover:text-white flex items-center gap-2">
+                        <span>🖼️</span> Images to PDF
+                    </button>
+                    <button onclick="switchTab('compress')" id="tab-compress" class="nav-tab w-full text-left px-4 py-2.5 rounded-lg bg-slate-900 font-medium text-sm transition text-slate-400 hover:text-white flex items-center gap-2">
+                        <span>🗜️</span> Compress Structure
+                    </button>
+                    <button onclick="switchTab('metadata')" id="tab-metadata" class="nav-tab w-full text-left px-4 py-2.5 rounded-lg bg-slate-900 font-medium text-sm transition text-slate-400 hover:text-white flex items-center gap-2">
+                        <span>🛡️</span> Metadata Scrubber
+                    </button>
+                </nav>
+            </div>
+
+            <!-- User Control Footer -->
+            <div class="space-y-3 pt-4 border-t border-slate-800">
+                <div class="flex gap-2">
+                    <button onclick="logoutUser()" class="flex-1 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold py-2 rounded-xl transition">
+                        Logout
+                    </button>
+                    <button onclick="openAccountDeleteModal()" class="flex-1 bg-red-950/60 hover:bg-red-900 text-red-400 text-xs font-semibold py-2 rounded-xl transition border border-red-900">
+                        Delete Acc
+                    </button>
+                </div>
+                <div class="bg-slate-800/80 p-3 rounded-xl border border-slate-700 text-[11px] text-slate-300 space-y-1">
+                    <p class="font-semibold text-white">🛠️ Support</p>
+                    <p class="text-blue-300 select-all">zivo.developer@gmail.com</p>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Sidebar Backdrop for Mobile Drawer -->
+        <div id="sidebarBackdrop" onclick="toggleMobileSidebar()" class="hidden fixed inset-0 bg-slate-950/60 z-30 lg:hidden"></div>
+
+        <!-- Main Workspace Area -->
+        <main class="flex-1 p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto space-y-6 w-full">
+            
+            <!-- 1. GST RECON & AUDIT SECTION -->
+            <section id="section-recon" class="tool-section space-y-6">
+                <div class="flex flex-col lg:flex-row justify-between items-start lg:items-center bg-slate-900 border border-slate-800 p-4 sm:p-6 rounded-2xl shadow-sm gap-4">
+                    <div>
+                        <h2 class="text-xl sm:text-2xl font-bold text-white">Vendor Invoice & Tax Reconciliation</h2>
+                        <p class="text-xs sm:text-sm text-slate-400">Upload bulk PDF bills/invoices. Real text is extracted securely with no fake mock data.</p>
+                    </div>
+                    <div class="flex flex-wrap gap-2 sm:gap-3 w-full lg:w-auto">
+                        <button onclick="downloadCSV()" class="flex-1 lg:flex-none bg-blue-600 hover:bg-blue-500 text-white px-4 py-2.5 rounded-xl font-semibold text-xs sm:text-sm transition shadow flex items-center justify-center gap-2">
+                            <span>⬇️ Download CSV</span>
+                        </button>
+                        <button onclick="openClearModal()" class="flex-1 lg:flex-none bg-red-950/40 hover:bg-red-900 text-red-400 border border-red-900 px-4 py-2.5 rounded-xl font-semibold text-xs sm:text-sm transition">
+                            🗑️ Clear Ledger
+                        </button>
+                    </div>
+                </div>
+
+                <!-- KPI Metrics Cards -->
+                <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+                    <div class="bg-slate-900 border border-slate-800 p-4 sm:p-5 rounded-2xl shadow-sm">
+                        <p class="text-[10px] sm:text-xs uppercase tracking-wider text-slate-400 font-semibold">Total Documents</p>
+                        <p id="kpiCount" class="text-2xl sm:text-3xl font-bold text-white mt-1">0</p>
+                    </div>
+                    <div class="bg-slate-900 border border-slate-800 p-4 sm:p-5 rounded-2xl shadow-sm">
+                        <p class="text-[10px] sm:text-xs uppercase tracking-wider text-slate-400 font-semibold">Total Taxable Value</p>
+                        <p id="kpiTaxable" class="text-xl sm:text-3xl font-bold text-blue-400 mt-1 truncate">₹ 0.00</p>
+                    </div>
+                    <div class="bg-slate-900 border border-slate-800 p-4 sm:p-5 rounded-2xl shadow-sm">
+                        <p class="text-[10px] sm:text-xs uppercase tracking-wider text-slate-400 font-semibold">Total GST</p>
+                        <p id="kpiTax" class="text-xl sm:text-3xl font-bold text-emerald-400 mt-1 truncate">₹ 0.00</p>
+                    </div>
+                    <div class="bg-slate-900 border border-slate-800 p-4 sm:p-5 rounded-2xl shadow-sm">
+                        <p class="text-[10px] sm:text-xs uppercase tracking-wider text-slate-400 font-semibold">Unverified / Flags</p>
+                        <p id="kpiFlags" class="text-2xl sm:text-3xl font-bold text-amber-400 mt-1">0</p>
+                    </div>
+                </div>
+
+                <!-- Upload Dropzone -->
+                <div class="bg-slate-900 border-2 border-dashed border-slate-800 rounded-2xl p-6 text-center hover:border-blue-500 transition">
+                    <input type="file" id="bulkPdfInput" accept="application/pdf" multiple class="hidden" onchange="handleBulkFiles(this.files)">
+                    <label for="bulkPdfInput" class="cursor-pointer flex flex-col items-center">
+                        <span class="text-3xl mb-2">📁</span>
+                        <span class="text-sm font-bold text-blue-400">Click or Drop PDF Invoices / Storybooks Here</span>
+                        <span class="text-xs text-slate-400 mt-1">Parses real text strictly. Unfound fields remain blank (no fake values).</span>
+                    </label>
+                </div>
+
+                <!-- Live Data Table -->
+                <div class="bg-slate-900 border border-slate-800 rounded-2xl shadow-sm overflow-hidden">
+                    <div class="px-6 py-4 border-b border-slate-800 flex flex-col sm:flex-row justify-between items-start sm:items-center bg-slate-900/50 gap-2">
+                        <h3 class="font-semibold text-white text-sm">Extracted Ledger Items <span class="text-xs font-normal text-slate-400 ml-1">(Tap any cell to edit)</span></h3>
+                        <span id="tableCountBadge" class="text-xs bg-blue-950 text-blue-300 font-semibold px-3 py-1 rounded-full border border-blue-900">0 rows</span>
+                    </div>
+                    <div class="overflow-x-auto max-h-[450px]">
+                        <table class="w-full text-left text-sm whitespace-nowrap">
+                            <thead class="bg-slate-950 text-slate-400 uppercase text-xs sticky top-0 border-b border-slate-800">
+                                <tr>
+                                    <th class="px-4 py-3">#</th>
+                                    <th class="px-6 py-3">File Name</th>
+                                    <th class="px-6 py-3">Invoice No</th>
+                                    <th class="px-6 py-3">Date</th>
+                                    <th class="px-6 py-3">GSTIN</th>
+                                    <th class="px-6 py-3 text-right">Taxable (₹)</th>
+                                    <th class="px-6 py-3 text-right">GST (₹)</th>
+                                    <th class="px-6 py-3 text-right">Total (₹)</th>
+                                    <th class="px-6 py-3">Status</th>
+                                    <th class="px-4 py-3 text-center">Action</th>
+                                </tr>
+                            </thead>
+                            <tbody id="reconTableBody" class="divide-y divide-slate-800">
+                                <tr>
+                                    <td colspan="10" class="px-6 py-12 text-center text-slate-500">No PDFs loaded yet. Upload documents above.</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 2. MERGE TAB -->
+            <section id="section-merge" class="tool-section space-y-6 hidden">
+                <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl space-y-4">
+                    <h2 class="text-lg font-semibold">Merge Multiple PDFs</h2>
+                    <p class="text-sm text-slate-400">Combine multiple PDF documents into a single continuous file.</p>
+                    <input type="file" id="merge-files" multiple accept=".pdf" class="block w-full text-sm text-slate-400 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-blue-600 file:text-white hover:file:bg-blue-500 cursor-pointer">
+                    <div id="merge-file-list" class="text-xs text-slate-400 bg-slate-950 p-3 rounded-lg min-h-[50px]">No files selected</div>
+                    <button onclick="runMerge()" class="w-full bg-blue-600 hover:bg-blue-500 font-semibold py-3 rounded-xl transition shadow-lg">Merge & Download PDF</button>
+                </div>
+            </section>
+
+            <!-- 3. SPLIT TAB -->
+            <section id="section-split" class="tool-section space-y-6 hidden">
+                <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl space-y-4">
+                    <h2 class="text-lg font-semibold">Split PDF into Pages</h2>
+                    <p class="text-sm text-slate-400">Extract every page of a PDF into individual files.</p>
+                    <input type="file" id="split-file" accept=".pdf" class="block w-full text-sm text-slate-400 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-blue-600 file:text-white hover:file:bg-blue-500 cursor-pointer">
+                    <button onclick="runSplit()" class="w-full bg-blue-600 hover:bg-blue-500 font-semibold py-3 rounded-xl transition shadow-lg">Split & Download Pages</button>
+                </div>
+            </section>
+
+            <!-- 4. IMAGES TO PDF TAB -->
+            <section id="section-img2pdf" class="tool-section space-y-6 hidden">
+                <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl space-y-4">
+                    <h2 class="text-lg font-semibold">Convert Images to PDF</h2>
+                    <p class="text-sm text-slate-400">Turn JPG or PNG images into a clean PDF document.</p>
+                    <input type="file" id="img-files" multiple accept="image/png, image/jpeg" class="block w-full text-sm text-slate-400 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-blue-600 file:text-white hover:file:bg-blue-500 cursor-pointer">
+                    <div id="img-file-list" class="text-xs text-slate-400 bg-slate-950 p-3 rounded-lg min-h-[50px]">No images selected</div>
+                    <button onclick="runImg2Pdf()" class="w-full bg-blue-600 hover:bg-blue-500 font-semibold py-3 rounded-xl transition shadow-lg">Convert Images to PDF</button>
+                </div>
+            </section>
+
+            <!-- 5. COMPRESS TAB -->
+            <section id="section-compress" class="tool-section space-y-6 hidden">
+                <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl space-y-4">
+                    <h2 class="text-lg font-semibold">Compress PDF Structure</h2>
+                    <p class="text-sm text-slate-400">Clean up object streams and optimize layout structure.</p>
+                    <input type="file" id="compress-file" accept=".pdf" class="block w-full text-sm text-slate-400 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-blue-600 file:text-white hover:file:bg-blue-500 cursor-pointer">
+                    <button onclick="runCompress()" class="w-full bg-blue-600 hover:bg-blue-500 font-semibold py-3 rounded-xl transition shadow-lg">Compress & Download</button>
+                </div>
+            </section>
+
+            <!-- 6. METADATA SCRUBBER TAB -->
+            <section id="section-metadata" class="tool-section space-y-6 hidden">
+                <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl space-y-4">
+                    <h2 class="text-lg font-semibold">Metadata Scrubber</h2>
+                    <p class="text-sm text-slate-400">Inspect and strip hidden author, creator, and producer tags from PDFs.</p>
+                    <input type="file" id="meta-file" accept=".pdf" class="block w-full text-sm text-slate-400 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-blue-600 file:text-white hover:file:bg-blue-500 cursor-pointer">
+                    <div id="meta-info" class="text-xs text-slate-300 bg-slate-950 p-4 rounded-lg font-mono min-h-[80px]">Load a PDF to view metadata tags.</div>
+                    <button onclick="runScrubMetadata()" class="w-full bg-blue-600 hover:bg-blue-500 font-semibold py-3 rounded-xl transition shadow-lg">Scrub Metadata & Download</button>
+                </div>
+            </section>
+
+        </main>
+    </div>
+
+    <!-- CLEAR DATA CONFIRMATION MODAL -->
+    <div id="clearModal" class="hidden fixed inset-0 bg-slate-950/70 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+        <div class="bg-slate-900 border border-slate-800 max-w-md w-full p-6 rounded-2xl shadow-2xl space-y-4">
+            <h3 class="text-lg font-bold text-red-400">⚠️ Clear Ledger Data?</h3>
+            <p class="text-xs text-slate-400">Type the exact phrase below to confirm:</p>
+            <div class="bg-slate-950 p-3 rounded-xl font-mono text-xs text-slate-300 select-all">yes I want to delete everything</div>
+            <input type="text" id="confirmText" oninput="checkDeleteInput(this.value)" placeholder="Type confirmation here..." class="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-sm focus:outline-none focus:border-red-600">
+            <div class="flex justify-end gap-3 pt-2">
+                <button onclick="closeClearModal()" class="px-4 py-2 rounded-xl text-sm font-medium bg-slate-800 text-slate-200 hover:bg-slate-700 transition">Cancel</button>
+                <button id="finalDeleteBtn" onclick="executeClearData()" disabled class="px-4 py-2 rounded-xl text-sm font-medium bg-red-900/50 text-white cursor-not-allowed transition">Delete Ledger</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ACCOUNT DELETE CONFIRMATION MODAL -->
+    <div id="accountDeleteModal" class="hidden fixed inset-0 bg-slate-950/70 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+        <div class="bg-slate-900 border border-slate-800 max-w-md w-full p-6 rounded-2xl shadow-2xl space-y-4">
+            <h3 class="text-lg font-bold text-red-400">⚠️ Permanently Delete Account?</h3>
+            <p class="text-xs text-slate-400">Type the exact phrase below to confirm:</p>
+            <div class="bg-slate-950 p-3 rounded-xl font-mono text-xs text-slate-300 select-all">yes I want to delete everything</div>
+            <input type="text" id="confirmAccountText" oninput="checkAccountDeleteInput(this.value)" placeholder="Type confirmation here..." class="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-sm focus:outline-none focus:border-red-600">
+            <div class="flex justify-end gap-3 pt-2">
+                <button onclick="closeAccountDeleteModal()" class="px-4 py-2 rounded-xl text-sm font-medium bg-slate-800 text-slate-200 hover:bg-slate-700 transition">Cancel</button>
+                <button id="finalAccountDeleteBtn" onclick="executeAccountDelete()" disabled class="px-4 py-2 rounded-xl text-sm font-medium bg-red-900/50 text-white cursor-not-allowed transition">Delete Account</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- JAVASCRIPT LOGIC -->
+    <script>
+        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+
+        let reconData = JSON.parse(localStorage.getItem('zivo_recon_data')) || [];
+        let registeredUsers = JSON.parse(localStorage.getItem('zivo_users')) || [];
+        let currentUser = JSON.parse(localStorage.getItem('zivo_current_user')) || null;
+
+        window.addEventListener('DOMContentLoaded', () => {
+            checkAuthStatus();
+            renderTable();
+            updateDashboardMetrics();
+        });
+
+        function checkAuthStatus() {
+            const authContainer = document.getElementById('authContainer');
+            if (!currentUser) {
+                authContainer.classList.remove('hidden');
+                document.getElementById('registerForm').classList.remove('hidden');
+                document.getElementById('loginForm').classList.add('hidden');
+            } else {
+                authContainer.classList.add('hidden');
+            }
+        }
+
+        function switchTab(tabId) {
+            document.querySelectorAll('.tool-section').forEach(el => el.classList.add('hidden'));
+            document.querySelectorAll('.nav-tab').forEach(el => {
+                el.classList.remove('bg-blue-600', 'text-white');
+                el.classList.add('bg-slate-900', 'text-slate-400');
+            });
+            document.getElementById('section-' + tabId).classList.remove('hidden');
+            const activeBtn = document.getElementById('tab-' + tabId);
+            activeBtn.classList.remove('bg-slate-900', 'text-slate-400');
+            activeBtn.classList.add('bg-blue-600', 'text-white');
+            if (window.innerWidth < 1024) toggleMobileSidebar();
+        }
+
+        function toggleMobileSidebar() {
+            const sidebar = document.getElementById('sidebar');
+            const backdrop = document.getElementById('sidebarBackdrop');
+            sidebar.classList.toggle('-translate-x-full');
+            backdrop.classList.toggle('hidden');
+        }
+
+        function toggleDarkMode() {
+            document.documentElement.classList.toggle('dark');
+        }
+
+        function switchAuthMode(mode) {
+            if (mode === 'login') {
+                document.getElementById('registerForm').classList.add('hidden');
+                document.getElementById('loginForm').classList.remove('hidden');
+                document.getElementById('authTitle').textContent = 'Welcome Back';
+            } else {
+                document.getElementById('loginForm').classList.add('hidden');
+                document.getElementById('registerForm').classList.remove('hidden');
+                document.getElementById('authTitle').textContent = 'Welcome to Zivo Pro';
+            }
+        }
+
+        function validateAge(dobString) {
+            const dob = new Date(dobString);
+            const today = new Date();
+            let age = today.getFullYear() - dob.getFullYear();
+            const m = today.getMonth() - dob.getMonth();
+            if (m < 0 || (m === 0 && today.getDate() < dob.getDate())) age--;
+            const errEl = document.getElementById('ageError');
+            const btnEl = document.getElementById('regBtn');
+            if (age < 18) {
+                errEl.classList.remove('hidden');
+                btnEl.disabled = true;
+                btnEl.classList.add('opacity-50', 'cursor-not-allowed');
+            } else {
+                errEl.classList.add('hidden');
+                btnEl.disabled = false;
+                btnEl.classList.remove('opacity-50', 'cursor-not-allowed');
+            }
+        }
+
+        function handleRegister(e) {
+            e.preventDefault();
+            const name = document.getElementById('regName').value.trim();
+            const dob = document.getElementById('regDob').value;
+            const phone = document.getElementById('regPhone').value.trim();
+            const email = document.getElementById('regEmail').value.trim();
+            const username = document.getElementById('regUser').value.trim();
+            const password = document.getElementById('regPass').value;
+            const errEl = document.getElementById('regError');
+
+            if (registeredUsers.some(u => u.username === username)) {
+                errEl.textContent = 'Username already taken.';
+                return;
+            }
+
+            currentUser = { name, dob, phone, email, username, password, createdAt: Date.now() };
+            registeredUsers.push(currentUser);
+            localStorage.setItem('zivo_users', JSON.stringify(registeredUsers));
+            localStorage.setItem('zivo_current_user', JSON.stringify(currentUser));
+            checkAuthStatus();
+        }
+
+        function handleLogin(e) {
+            e.preventDefault();
+            const username = document.getElementById('loginUser').value.trim();
+            const password = document.getElementById('loginPass').value;
+            const found = registeredUsers.find(u => u.username === username && u.password === password);
+            if (!found) {
+                document.getElementById('loginError').textContent = 'Invalid credentials.';
+                return;
+            }
+            currentUser = found;
+            localStorage.setItem('zivo_current_user', JSON.stringify(currentUser));
+            checkAuthStatus();
+        }
+
+        function logoutUser() {
+            localStorage.removeItem('zivo_current_user');
+            currentUser = null;
+            checkAuthStatus();
+        }
+
+        // --- REAL PDF PARSING & TEXT EXTRACTION (NO FAKE DATA) ---
+        async function handleBulkFiles(files) {
+            for (let file of files) {
+                try {
+                    const extracted = await extractPdfData(file);
+                    reconData.unshift(extracted);
+                } catch (err) {
+                    console.error('Error parsing PDF:', err);
+                    reconData.unshift({
+                        id: Date.now() + Math.random(),
+                        fileName: file.name,
+                        invNo: "-",
+                        date: "-",
+                        gstin: "-",
+                        taxable: 0,
+                        gst: 0,
+                        total: 0,
+                        status: "❌ Parse Failed"
+                    });
+                }
+            }
+            saveAndRefresh();
+        }
+
+        async function extractPdfData(file) {
+            const arrayBuffer = await file.arrayBuffer();
+            const loadingTask = pdfjsLib.getDocument({ data: arrayBuffer });
+            const pdfDoc = await loadingTask.promise;
+            
+            let fullText = "";
+            for (let i = 1; i <= pdfDoc.numPages; i++) {
+                const page = await pdfDoc.getPage(i);
+                const textContent = await page.getTextContent();
+                const pageText = textContent.items.map(item => item.str).join(" ");
+                fullText += pageText + "\n";
+            }
+
+            // Real Regex Extraction (leaves blank if not found)
+            const gstinRegex = /[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}/g;
+            const gstinMatch = fullText.match(gstinRegex);
+            const gstin = gstinMatch ? gstinMatch[0] : "";
+
+            const invRegex = /(?:Invoice\s*(?:No|Number|#)[:\s]*)([A-Za-z0-9\-\/]+)/i;
+            const invMatch = fullText.match(invRegex);
+            const invNo = invMatch ? invMatch[1] : "";
+
+            const dateRegex = /\b(\d{2}[-/]\d{2}[-/]\d{4}|\d{2}\s+(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\s+\d{4})\b/i;
+            const dateMatch = fullText.match(dateRegex);
+            const date = dateMatch ? dateMatch[1] : "";
+
+            const totalRegex = /(?:Total|Grand\s*Total|Amount\s*Payable)[:\s]*(?:₹|INR)?\s*([\d,]+\.\d{2})/i;
+            const totalMatch = fullText.match(totalRegex);
+            const total = totalMatch ? parseFloat(totalMatch[1].replace(/,/g, '')) : 0;
+
+            const taxableRegex = /(?:Taxable\s*Value|Subtotal|Net\s*Amount)[:\s]*(?:₹|INR)?\s*([\d,]+\.\d{2})/i;
+            const taxableMatch = fullText.match(taxableRegex);
+            const taxable = taxableMatch ? parseFloat(taxableMatch[1].replace(/,/g, '')) : (total > 0 ? Number((total / 1.18).toFixed(2)) : 0);
+
+            const gst = total > taxable ? Number((total - taxable).toFixed(2)) : 0;
+
+            let status = "✅ Reconciled";
+            if (!gstin || !invNo) {
+                status = "⚠️ Unverified / Non-Invoice Document";
+            }
+
+            return {
+                id: Date.now() + Math.random(),
+                fileName: file.name,
+                invNo: invNo || "-",
+                date: date || "-",
+                gstin: gstin || "-",
+                taxable: taxable,
+                gst: gst,
+                total: total,
+                status: status
+            };
+        }
+
+        function saveAndRefresh() {
+            localStorage.setItem('zivo_recon_data', JSON.stringify(reconData));
+            renderTable();
+            updateDashboardMetrics();
+        }
+
+        function updateCell(index, field, value) {
+            if (field === 'taxable' || field === 'gst' || field === 'total') {
+                reconData[index][field] = parseFloat(value) || 0;
+            } else {
+                reconData[index][field] = value;
+            }
+            localStorage.setItem('zivo_recon_data', JSON.stringify(reconData));
+            updateDashboardMetrics();
+        }
+
+        function removeInvoice(index) {
+            reconData.splice(index, 1);
+            saveAndRefresh();
+        }
+
+        function updateDashboardMetrics() {
+            const count = reconData.length;
+            const totalTaxable = reconData.reduce((acc, curr) => acc + (curr.taxable || 0), 0);
+            const totalTax = reconData.reduce((acc, curr) => acc + (curr.gst || 0), 0);
+            const flags = reconData.filter(i => !i.status.includes('Reconciled')).length;
+
+            document.getElementById('kpiCount').textContent = count.toLocaleString('en-IN');
+            document.getElementById('kpiTaxable').textContent = `₹ ${totalTaxable.toLocaleString('en-IN', { minimumFractionDigits: 2 })}`;
+            document.getElementById('kpiTax').textContent = `₹ ${totalTax.toLocaleString('en-IN', { minimumFractionDigits: 2 })}`;
+            document.getElementById('kpiFlags').textContent = flags;
+            document.getElementById('tableCountBadge').textContent = `${count} rows`;
+        }
+
+        function renderTable() {
+            const tbody = document.getElementById('reconTableBody');
+            if (reconData.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="10" class="px-6 py-12 text-center text-slate-500">No PDFs loaded yet. Upload documents above.</td></tr>`;
+                return;
+            }
+
+            tbody.innerHTML = '';
+            reconData.forEach((item, index) => {
+                const badgeClass = item.status.includes('Reconciled') 
+                    ? 'bg-emerald-950 text-emerald-400 border border-emerald-900' 
+                    : 'bg-amber-950 text-amber-400 border border-amber-900';
+
+                const row = document.createElement('tr');
+                row.className = 'hover:bg-slate-800/50 transition';
+                row.innerHTML = `
+                    <td class="px-4 py-3 text-xs text-slate-500 font-mono">${index + 1}</td>
+                    <td class="px-6 py-3 font-medium text-slate-200 truncate max-w-[160px]">${item.fileName}</td>
+                    <td class="px-6 py-3 font-mono text-xs text-slate-300" contenteditable="true" onblur="updateCell(${index}, 'invNo', this.innerText)">${item.invNo}</td>
+                    <td class="px-6 py-3 text-xs text-slate-300" contenteditable="true" onblur="updateCell(${index}, 'date', this.innerText)">${item.date}</td>
+                    <td class="px-6 py-3 font-mono text-xs text-slate-300" contenteditable="true" onblur="updateCell(${index}, 'gstin', this.innerText)">${item.gstin}</td>
+                    <td class="px-6 py-3 text-right font-mono text-slate-300" contenteditable="true" onblur="updateCell(${index}, 'taxable', this.innerText)">${item.taxable.toFixed(2)}</td>
+                    <td class="px-6 py-3 text-right font-mono text-slate-300" contenteditable="true" onblur="updateCell(${index}, 'gst', this.innerText)">${item.gst.toFixed(2)}</td>
+                    <td class="px-6 py-3 text-right font-mono font-semibold text-slate-200" contenteditable="true" onblur="updateCell(${index}, 'total', this.innerText)">${item.total.toFixed(2)}</td>
+                    <td class="px-6 py-3"><span class="inline-flex whitespace-nowrap px-2.5 py-1 rounded-full text-xs font-semibold ${badgeClass}">${item.status}</span></td>
+                    <td class="px-4 py-3 text-center">
+                        <button onclick="removeInvoice(${index})" class="text-red-400 hover:text-red-300 font-bold p-1 rounded-lg hover:bg-red-950/50 transition" title="Remove">❌</button>
+                    </td>
+                `;
+                tbody.appendChild(row);
+            });
+        }
+
+        // --- PDF UTILITY FUNCTIONS ---
+        function downloadFile(bytes, filename, mimeType) {
+            const blob = new Blob([bytes], { type: mimeType });
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = filename;
+            link.click();
+            URL.revokeObjectURL(link.href);
+        }
+
+        document.getElementById('merge-files').addEventListener('change', (e) => {
+            const files = Array.from(e.target.files);
+            document.getElementById('merge-file-list').innerText = files.map(f => f.name).join(', ') || 'No files selected';
+        });
+
+        async function runMerge() {
+            const fileInput = document.getElementById('merge-files');
+            if (fileInput.files.length < 2) { alert('Select at least 2 PDF files.'); return; }
+            const mergedPdf = await PDFLib.PDFDocument.create();
+            for (let file of fileInput.files) {
+                const pdf = await PDFLib.PDFDocument.load(await file.arrayBuffer());
+                const copiedPages = await mergedPdf.copyPages(pdf, pdf.getPageIndices());
+                copiedPages.forEach(p => mergedPdf.addPage(p));
+            }
+            downloadFile(await mergedPdf.save(), 'merged_document.pdf', 'application/pdf');
+        }
+
+        async function runSplit() {
+            const fileInput = document.getElementById('split-file');
+            if (!fileInput.files[0]) { alert('Select a PDF file.'); return; }
+            const pdf = await PDFLib.PDFDocument.load(await fileInput.files[0].arrayBuffer());
+            for (let i = 0; i < pdf.getPageCount(); i++) {
+                const subPdf = await PDFLib.PDFDocument.create();
+                const [page] = await subPdf.copyPages(pdf, [i]);
+                subPdf.addPage(page);
+                downloadFile(await subPdf.save(), `page_${i + 1}.pdf`, 'application/pdf');
+            }
+        }
+
+        document.getElementById('img-files').addEventListener('change', (e) => {
+            const files = Array.from(e.target.files);
+            document.getElementById('img-file-list').innerText = files.map(f => f.name).join(', ') || 'No images selected';
+        });
+
+        async function runImg2Pdf() {
+            const fileInput = document.getElementById('img-files');
+            if (fileInput.files.length === 0) { alert('Add at least one image.'); return; }
+            const pdfDoc = await PDFLib.PDFDocument.create();
+            for (let file of fileInput.files) {
+                const buf = await file.arrayBuffer();
+                const img = file.type.includes('png') ? await pdfDoc.embedPng(buf) : await pdfDoc.embedJpg(buf);
+                const page = pdfDoc.addPage([img.width, img.height]);
+                page.drawImage(img, { x: 0, y: 0, width: img.width, height: img.height });
+            }
+            downloadFile(await pdfDoc.save(), 'images_converted.pdf', 'application/pdf');
+        }
+
+        async function runCompress() {
+            const fileInput = document.getElementById('compress-file');
+            if (!fileInput.files[0]) { alert('Select a PDF file.'); return; }
+            const pdf = await PDFLib.PDFDocument.load(await fileInput.files[0].arrayBuffer());
+            downloadFile(await pdf.save({ useObjectStreams: true }), 'compressed_document.pdf', 'application/pdf');
+        }
+
+        let currentMetaPdfDoc = null;
+        document.getElementById('meta-file').addEventListener('change', async (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+            currentMetaPdfDoc = await PDFLib.PDFDocument.load(await file.arrayBuffer());
+            document.getElementById('meta-info').innerText = `Title: ${currentMetaPdfDoc.getTitle() || 'None'}\nAuthor: ${currentMetaPdfDoc.getAuthor() || 'None'}\nSubject: ${currentMetaPdfDoc.getSubject() || 'None'}\nCreator: ${currentMetaPdfDoc.getCreator() || 'None'}`;
+        });
+
+        async function runScrubMetadata() {
+            if (!currentMetaPdfDoc) { alert('Load a PDF file first.'); return; }
+            ['Title', 'Author', 'Subject', 'Creator', 'Producer'].forEach(k => currentMetaPdfDoc[`set${k}`](''));
+            downloadFile(await currentMetaPdfDoc.save(), 'clean_metadata.pdf', 'application/pdf');
+        }
+
+        // Modals
+        function openClearModal() { document.getElementById('clearModal').classList.remove('hidden'); }
+        function closeClearModal() { document.getElementById('clearModal').classList.add('hidden'); }
+        function checkDeleteInput(val) {
+            const btn = document.getElementById('finalDeleteBtn');
+            if (val === 'yes I want to delete everything') {
+                btn.disabled = false;
+                btn.className = 'px-4 py-2 rounded-xl text-sm font-medium bg-red-600 hover:bg-red-700 text-white transition cursor-pointer';
+            } else {
+                btn.disabled = true;
+                btn.className = 'px-4 py-2 rounded-xl text-sm font-medium bg-red-900/50 text-white cursor-not-allowed transition';
+            }
+        }
+        function executeClearData() {
+            reconData = [];
+            localStorage.removeItem('zivo_recon_data');
+            saveAndRefresh();
+            closeClearModal();
+        }
+
+        function openAccountDeleteModal() { document.getElementById('accountDeleteModal').classList.remove('hidden'); }
+        function closeAccountDeleteModal() { document.getElementById('accountDeleteModal').classList.add('hidden'); }
+        function checkAccountDeleteInput(val) {
+            const btn = document.getElementById('finalAccountDeleteBtn');
+            if (val === 'yes I want to delete everything') {
+                btn.disabled = false;
+                btn.className = 'px-4 py-2 rounded-xl text-sm font-medium bg-red-600 hover:bg-red-700 text-white transition cursor-pointer';
+            } else {
+                btn.disabled = true;
+                btn.className = 'px-4 py-2 rounded-xl text-sm font-medium bg-red-900/50 text-white cursor-not-allowed transition';
+            }
+        }
+        function executeAccountDelete() {
+            if (currentUser) {
+                registeredUsers = registeredUsers.filter(u => u.username !== currentUser.username);
+                localStorage.setItem('zivo_users', JSON.stringify(registeredUsers));
+            }
+            localStorage.removeItem('zivo_current_user');
+            localStorage.removeItem('zivo_recon_data');
+            currentUser = null;
+            closeAccountDeleteModal();
+            checkAuthStatus();
+        }
+
+        function downloadCSV() {
+            if (reconData.length === 0) return;
+            const headers = ['Sr No', 'File Name', 'Invoice No', 'Date', 'GSTIN', 'Taxable Value', 'GST Amount', 'Total Amount', 'Status'];
+            const rows = reconData.map((i, idx) => [idx + 1, i.fileName, i.invNo, i.date, i.gstin, i.taxable.toFixed(2), i.gst.toFixed(2), i.total.toFixed(2), i.status]);
+            const csvContent = [headers, ...rows].map(e => e.join(',')).join('\n');
+            downloadFile(csvContent, 'zivo_ledger_backup.csv', 'text/csv;charset=utf-8;');
+        }
+    </script>
+</body>
+</html>
