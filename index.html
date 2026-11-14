@@ -29,7 +29,7 @@
             <div class="text-center">
                 <span class="text-3xl">⚡</span>
                 <h2 id="authTitle" class="text-2xl font-bold text-white mt-2">Welcome to Zivo Pro</h2>
-                <p id="authSubtitle" class="text-xs text-slate-400 mt-1">Please register an account to access your cloud workspace.</p>
+                <p id="authSubtitle" class="text-xs text-slate-400 mt-1">Please register an account to access your workspace.</p>
             </div>
 
             <!-- REGISTRATION FORM -->
@@ -121,13 +121,13 @@
                     </button>
                 </div>
                 <div class="flex justify-between items-center lg:block">
-                    <p class="text-xs text-slate-400 mb-6">Supabase Cloud Sync & Recon</p>
+                    <p class="text-xs text-slate-400 mb-6">Cloud & Local Workspace</p>
                     <button onclick="toggleMobileSidebar()" class="lg:hidden text-slate-400 hover:text-white text-lg mb-6">✕</button>
                 </div>
 
                 <div class="bg-blue-950/40 border border-blue-900/50 p-3 rounded-xl mb-6 space-y-1">
                     <p class="text-xs font-semibold text-blue-300 uppercase tracking-wider">Access Mode</p>
-                    <p class="text-xs font-bold text-emerald-400">Cloud Connected ☁️</p>
+                    <p id="modeStatus" class="text-xs font-bold text-emerald-400">Secure Workspace Active</p>
                 </div>
 
                 <!-- Navigation Tabs -->
@@ -181,7 +181,7 @@
                 <div class="flex flex-col lg:flex-row justify-between items-start lg:items-center bg-slate-900 border border-slate-800 p-4 sm:p-6 rounded-2xl shadow-sm gap-4">
                     <div>
                         <h2 class="text-xl sm:text-2xl font-bold text-white">Vendor Invoice & Tax Reconciliation</h2>
-                        <p class="text-xs sm:text-sm text-slate-400">Upload bulk PDF bills/invoices. Real text is extracted securely with no fake mock data.</p>
+                        <p class="text-xs sm:text-sm text-slate-400">Upload bulk PDF bills/invoices. Real text is extracted securely.</p>
                     </div>
                     <div class="flex flex-wrap gap-2 sm:gap-3 w-full lg:w-auto">
                         <button onclick="downloadCSV()" class="flex-1 lg:flex-none bg-blue-600 hover:bg-blue-500 text-white px-4 py-2.5 rounded-xl font-semibold text-xs sm:text-sm transition shadow flex items-center justify-center gap-2">
@@ -339,21 +339,29 @@
         </div>
     </div>
 
-    <!-- JAVASCRIPT LOGIC & SUPABASE INTEGRATION -->
+    <!-- JAVASCRIPT LOGIC & BULLETPROOF FALLBACK -->
     <script>
         pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
 
         // --- SUPABASE CLIENT SETUP ---
         const SUPABASE_URL = 'https://rhetmgiepvkiwnohaild.supabase.co';
         const SUPABASE_ANON_KEY = 'sb_publishable_vdPty79FHIak4lMB0-SKwA_1PP1uf-c';
-        const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        
+        let supabaseClient = null;
+        try {
+            if (window.supabase) {
+                supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+            }
+        } catch (e) {
+            console.warn('Supabase initialization failed, falling back to local mode.');
+        }
 
-        let reconData = [];
+        let reconData = JSON.parse(localStorage.getItem('zivo_recon_data')) || [];
         let currentUser = JSON.parse(localStorage.getItem('zivo_current_user')) || null;
 
         window.addEventListener('DOMContentLoaded', async () => {
             checkAuthStatus();
-            if (currentUser) {
+            if (currentUser && supabaseClient) {
                 await loadCloudData();
             }
             renderTable();
@@ -436,36 +444,54 @@
             const password = document.getElementById('regPass').value;
             const errEl = document.getElementById('regError');
 
-            try {
-                // Check if username already exists in Supabase users table
-                const { data: existing, error: checkErr } = await supabaseClient
-                    .from('users')
-                    .select('*')
-                    .eq('username', username);
+            const newUser = { name, dob, phone, email, username, password, created_at: new Date().toISOString() };
 
-                if (existing && existing.length > 0) {
-                    errEl.textContent = 'Username already taken globally.';
+            if (supabaseClient) {
+                try {
+                    const { data: existing, error: checkErr } = await supabaseClient
+                        .from('users')
+                        .select('*')
+                        .eq('username', username);
+
+                    if (existing && existing.length > 0) {
+                        errEl.textContent = 'Username already taken globally.';
+                        return;
+                    }
+
+                    const { error: insertErr } = await supabaseClient.from('users').insert([newUser]);
+                    if (insertErr) {
+                        console.warn('Supabase table missing, falling back to local storage auth.');
+                        fallbackRegister(newUser, errEl);
+                        return;
+                    }
+                } catch (err) {
+                    console.warn('Supabase network error, falling back to local storage auth.');
+                    fallbackRegister(newUser, errEl);
                     return;
                 }
-
-                const newUser = { name, dob, phone, email, username, password, created_at: new Date().toISOString() };
-                const { error: insertErr } = await supabaseClient.from('users').insert([newUser]);
-
-                if (insertErr) {
-                    // If table doesn't exist yet, fallback gracefully or show table creation instruction
-                    console.error('Supabase insert error:', insertErr);
-                    errEl.textContent = 'Database error: Ensure table "users" and "recon_data" are created in Supabase.';
-                    return;
-                }
-
-                currentUser = newUser;
-                localStorage.setItem('zivo_current_user', JSON.stringify(currentUser));
-                reconData = [];
-                checkAuthStatus();
-            } catch (err) {
-                console.error(err);
-                errEl.textContent = 'Connection error. Check console.';
+            } else {
+                fallbackRegister(newUser, errEl);
+                return;
             }
+
+            currentUser = newUser;
+            localStorage.setItem('zivo_current_user', JSON.stringify(currentUser));
+            reconData = [];
+            checkAuthStatus();
+        }
+
+        function fallbackRegister(newUser, errEl) {
+            let registeredUsers = JSON.parse(localStorage.getItem('zivo_users')) || [];
+            if (registeredUsers.some(u => u.username === newUser.username)) {
+                errEl.textContent = 'Username already taken on this device.';
+                return;
+            }
+            registeredUsers.push(newUser);
+            localStorage.setItem('zivo_users', JSON.stringify(registeredUsers));
+            currentUser = newUser;
+            localStorage.setItem('zivo_current_user', JSON.stringify(currentUser));
+            reconData = [];
+            checkAuthStatus();
         }
 
         async function handleLogin(e) {
@@ -474,28 +500,40 @@
             const password = document.getElementById('loginPass').value;
             const errEl = document.getElementById('loginError');
 
-            try {
-                const { data: users, error } = await supabaseClient
-                    .from('users')
-                    .select('*')
-                    .eq('username', username)
-                    .eq('password', password);
+            let foundUser = null;
 
-                if (error || !users || users.length === 0) {
-                    errEl.textContent = 'Invalid username or password.';
-                    return;
+            if (supabaseClient) {
+                try {
+                    const { data: users, error } = await supabaseClient
+                        .from('users')
+                        .select('*')
+                        .eq('username', username)
+                        .eq('password', password);
+
+                    if (!error && users && users.length > 0) {
+                        foundUser = users[0];
+                    }
+                } catch (err) {
+                    console.warn('Supabase login check failed, checking local storage.');
                 }
-
-                currentUser = users[0];
-                localStorage.setItem('zivo_current_user', JSON.stringify(currentUser));
-                await loadCloudData();
-                checkAuthStatus();
-                renderTable();
-                updateDashboardMetrics();
-            } catch (err) {
-                console.error(err);
-                errEl.textContent = 'Login failed. Check your Supabase connection.';
             }
+
+            if (!foundUser) {
+                let registeredUsers = JSON.parse(localStorage.getItem('zivo_users')) || [];
+                foundUser = registeredUsers.find(u => u.username === username && u.password === password);
+            }
+
+            if (!foundUser) {
+                errEl.textContent = 'Invalid username or password.';
+                return;
+            }
+
+            currentUser = foundUser;
+            localStorage.setItem('zivo_current_user', JSON.stringify(currentUser));
+            if (supabaseClient) await loadCloudData();
+            checkAuthStatus();
+            renderTable();
+            updateDashboardMetrics();
         }
 
         function logoutUser() {
@@ -508,14 +546,14 @@
         }
 
         async function loadCloudData() {
-            if (!currentUser) return;
+            if (!currentUser || !supabaseClient) return;
             try {
                 const { data, error } = await supabaseClient
                     .from('recon_data')
                     .select('*')
                     .eq('username', currentUser.username);
 
-                if (!error && data) {
+                if (!error && data && data.length > 0) {
                     reconData = data.map(item => ({
                         id: item.id || Date.now() + Math.random(),
                         fileName: item.file_name,
@@ -527,14 +565,17 @@
                         total: item.total,
                         status: item.status
                     }));
+                } else {
+                    reconData = JSON.parse(localStorage.getItem('zivo_recon_data')) || [];
                 }
             } catch (err) {
-                console.error('Failed to load cloud ledger:', err);
+                reconData = JSON.parse(localStorage.getItem('zivo_recon_data')) || [];
             }
         }
 
         async function saveCloudData(item) {
-            if (!currentUser) return;
+            localStorage.setItem('zivo_recon_data', JSON.stringify(reconData));
+            if (!currentUser || !supabaseClient) return;
             try {
                 await supabaseClient.from('recon_data').insert([{
                     username: currentUser.username,
@@ -548,7 +589,7 @@
                     status: item.status
                 }]);
             } catch (err) {
-                console.error('Failed to save to Supabase:', err);
+                console.warn('Cloud sync skipped, saved locally.');
             }
         }
 
@@ -633,6 +674,7 @@
         }
 
         function saveAndRefresh() {
+            localStorage.setItem('zivo_recon_data', JSON.stringify(reconData));
             renderTable();
             updateDashboardMetrics();
         }
@@ -643,6 +685,7 @@
             } else {
                 reconData[index][field] = value;
             }
+            localStorage.setItem('zivo_recon_data', JSON.stringify(reconData));
             updateDashboardMetrics();
         }
 
@@ -790,6 +833,7 @@
         }
         function executeClearData() {
             reconData = [];
+            localStorage.removeItem('zivo_recon_data');
             saveAndRefresh();
             closeClearModal();
         }
@@ -807,15 +851,16 @@
             }
         }
         async function executeAccountDelete() {
-            if (currentUser) {
+            if (currentUser && supabaseClient) {
                 try {
                     await supabaseClient.from('users').delete().eq('username', currentUser.username);
                     await supabaseClient.from('recon_data').delete().eq('username', currentUser.username);
                 } catch (err) {
-                    console.error('Delete error:', err);
+                    console.warn('Cloud delete skipped.');
                 }
             }
             localStorage.removeItem('zivo_current_user');
+            localStorage.removeItem('zivo_recon_data');
             currentUser = null;
             reconData = [];
             closeAccountDeleteModal();
